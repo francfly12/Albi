@@ -1,14 +1,13 @@
-/* PAGE 1 (v2 finale) : barres verticales — pas d'arcs, affichage rapide.
+/* PAGE 1 (v2) : barres verticales — pas d'arcs, affichage rapide.
    Index gauche non lineaire : 0->1000 grand, puis 2000..8000 dilates
    pour que 8000 soit en bas de l'echelle.
    Boite orange = conso (du 0 vers le bas), boite bleue = prod
-   (assise sur le niveau conso, barre blanche au niveau du TOTAL).
-   "EXCEDENT" en bleu en bas de page si prod >= conso. */
+   (assise sur le niveau conso, barre blanche au niveau du TOTAL). */
 
 // ---- geometrie (ajustable apres test ecran) ----
 const int P1_Y0   = 60;    // ligne du zero
 const int P1_KY   = 45;    // px pour 0->1000 W au-dessus du zero (prod)
-const int P1_XOR  = 60;    // bord gauche boite orange (largeur 40)
+const int POR_XOR  = 60;    // bord gauche boite orange (largeur 40)
 const int P1_XBL  = 105;   // bord gauche boite bleue  (largeur 40)
 
 float p1_consoAvant = -1, p1_prodAvant = -1;
@@ -38,28 +37,22 @@ int p1_yDe(float v) {
   return P1_Y0 + (int)(v * P1_KY / 1000.0);        // negatif -> au-dessus du zero
 }
 
-// affiche une valeur sur fond propre : efface TOUJOURS le meme rectangle
-// noir (6 chiffres BigFont = 96 px), puis ecrit la valeur dedans
-void p1_affValeur(int x, int y, float val, byte r, byte v, byte b) {
-  myGLCD.setColor(0, 0, 0);
-  myGLCD.fillRect(x, y, x + 95, y + 15);     // zone fixe, 6 chiffres de large
-  myGLCD.setColor(r, v, b);
-  myGLCD.printNumF(val, 0, x, y);
-}
-
 void dessinerPage1() {
   myGLCD.clrScr();
   myGLCD.setFont(SmallFont);
 
   // ---- symbole 1 : index gris clair ----
-  myGLCD.setColor(254, 254, 254);              // blanc
-  myGLCD.fillRect(45, P1_Y0, P1_XOR - 3, P1_Y0 + 2);   // ligne du zero
+
   myGLCD.setColor(200, 200, 200);              // gris clair
-  myGLCD.fillRect(42, 1, 44, 240);            // ligne verticale
+  myGLCD.fillRect(42, 1, 44, 240);           // ligne verticale
+  myGLCD.fillRect(178, 1, 180, 240);            // autre ligne verticale
+  myGLCD.setColor(254, 254, 254);              // blanc
+  myGLCD.fillRect(28, P1_Y0, 56, P1_Y0 + 3);   // ligne du zero
+  myGLCD.fillRect(177, P1_Y0, 182, P1_Y0 + 3);   // ligne du zero
   myGLCD.setColor(0, 130, 255);
   myGLCD.print("1000", 5, P1_Y0 - P1_KY - 15);        // haut, bleu
   myGLCD.setColor(255, 255, 255);
-  myGLCD.print("0", 25, P1_Y0 - 8);
+  myGLCD.print("0", 15, P1_Y0 - 8);
   myGLCD.setColor(255, 165, 0);
   myGLCD.print("1000", 5, p1_yDe(1000) - 8);
   myGLCD.print("2000", 5, p1_yDe(2000) - 8);
@@ -82,20 +75,32 @@ void dessinerPage1() {
   rafraichirPage1();
 }
 
+// affiche une valeur sur fond propre : efface TOUJOURS le meme rectangle
+// noir (6 chiffres BigFont = 96 px), puis ecrit la valeur dedans
+void p1_affValeur(int x, int y, float val, byte r, byte v, byte b) {
+  myGLCD.setColor(0, 0, 0);
+  myGLCD.fillRect(x, y, x + 95, y + 15);     // zone fixe, 6 chiffres de large
+  myGLCD.setColor(r, v, b);
+  myGLCD.printNumF(val, 0, x, y);
+}
+
 void rafraichirPage1() {
   float total = consoW - prodW;
 
   // ---- symboles 2 et 3 : boites orange (conso) et bleue (prod) ----
   if (consoW != p1_consoAvant || prodW != p1_prodAvant) {
     // effacer l'ancienne zone des barres (noir)
-    int yMax = p1_yDe(max(p1_consoAvant, consoW));
     myGLCD.setColor(0, 0, 0);
-    myGLCD.fillRect(P1_XOR - 2, P1_Y0 - P1_KY - 2, P1_XBL + 72, yMax + 2);
+    myGLCD.fillRect(P1_XOR - 2, P1_Y0 - P1_KY - 2, P1_XBL + 71, 240);
 
     // boite orange : du zero jusqu'a la conso (largeur 40)
     int yC = p1_yDe(consoW);
     myGLCD.setColor(255, 165, 0);
     myGLCD.fillRect(P1_XOR, P1_Y0, P1_XOR + 40, yC);
+
+    // petite barre grise sous les boites orange et bleue
+    myGLCD.setColor(200, 200, 200);
+    myGLCD.fillRect(P1_XOR, yC + 1, P1_XOR + 85, yC + 3);
 
     // boite bleue : du total (sommet) jusqu'a la conso (base, largeur 40)
     int yT = p1_yDe(total);
@@ -131,10 +136,10 @@ void rafraichirPage1() {
   if (excedent != p1_excedentAffiche) {
     p1_excedentAffiche = excedent;
     myGLCD.setColor(0, 0, 0);
-    myGLCD.fillRect(180, 212, 315, 227);         // efface la zone (fixe)
+    myGLCD.fillRect(184, 212, 318, 227);         // efface la zone (fixe)
     if (excedent) {
       myGLCD.setColor(0, 130, 255);
-      myGLCD.print("EXCEDENT", 180, 212);        // bleu, BigFont
+      myGLCD.print("EXCEDENT", 184, 212);        // bleu, BigFont
     }
   }
 }
