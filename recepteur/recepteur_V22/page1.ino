@@ -7,7 +7,7 @@
 // ---- geometrie (ajustable apres test ecran) ----
 const int P1_Y0   = 60;    // ligne du zero
 const int P1_KY   = 45;    // px pour 0->1000 W au-dessus du zero (prod)
-const int POR_XOR  = 60;    // bord gauche boite orange (largeur 40)
+const int P1_XOR  = 60;    // bord gauche boite orange (largeur 40)
 const int P1_XBL  = 105;   // bord gauche boite bleue  (largeur 40)
 
 float p1_consoAvant = -1, p1_prodAvant = -1;
