@@ -46,13 +46,13 @@ void dessinerPage1() {
   myGLCD.setColor(200, 200, 200);              // gris clair
   myGLCD.fillRect(42, 1, 44, 240);           // ligne verticale
   myGLCD.fillRect(178, 1, 180, 240);            // autre ligne verticale
-  myGLCD.setColor(254, 254, 254);              // blanc
+   myGLCD.setColor(254, 254, 254);              // blanc
   myGLCD.fillRect(28, P1_Y0, 56, P1_Y0 + 3);   // ligne du zero
   myGLCD.fillRect(177, P1_Y0, 182, P1_Y0 + 3);   // ligne du zero
   myGLCD.setColor(0, 130, 255);
   myGLCD.print("1000", 5, P1_Y0 - P1_KY - 15);        // haut, bleu
   myGLCD.setColor(255, 255, 255);
-  myGLCD.print("0", 15, P1_Y0 - 8);
+  myGLCD.print("0", 15, P1_Y0 -3);
   myGLCD.setColor(255, 165, 0);
   myGLCD.print("1000", 5, p1_yDe(1000) - 8);
   myGLCD.print("2000", 5, p1_yDe(2000) - 8);
@@ -74,7 +74,6 @@ void dessinerPage1() {
   p1_affP = -1; p1_affC = -1; p1_affT = -1;
   rafraichirPage1();
 }
-
 // affiche une valeur sur fond propre : efface TOUJOURS le meme rectangle
 // noir (6 chiffres BigFont = 96 px), puis ecrit la valeur dedans
 void p1_affValeur(int x, int y, float val, byte r, byte v, byte b) {
@@ -90,32 +89,33 @@ void rafraichirPage1() {
   // ---- symboles 2 et 3 : boites orange (conso) et bleue (prod) ----
   if (consoW != p1_consoAvant || prodW != p1_prodAvant) {
     // effacer l'ancienne zone des barres (noir)
+    int yMax = p1_yDe(max(p1_consoAvant, consoW));
     myGLCD.setColor(0, 0, 0);
     myGLCD.fillRect(P1_XOR - 2, P1_Y0 - P1_KY - 2, P1_XBL + 71, 240);
 
-    // boite orange : du zero jusqu'a la conso (largeur 40)
+    // boite orange : du zero jusqu'a la conso (largeur 50)
     int yC = p1_yDe(consoW);
     myGLCD.setColor(255, 165, 0);
-    myGLCD.fillRect(P1_XOR, P1_Y0, P1_XOR + 40, yC);
+    myGLCD.fillRect(P1_XOR, P1_Y0, P1_XOR + 50, yC);
 
     // petite barre grise sous les boites orange et bleue
-    myGLCD.setColor(200, 200, 200);
-    myGLCD.fillRect(P1_XOR, yC + 1, P1_XOR + 85, yC + 3);
+     myGLCD.setColor(200, 200, 200);
+    myGLCD.fillRect(P1_XOR,yC+1, P1_XOR + 105, yC+3);
 
     // boite bleue : du total (sommet) jusqu'a la conso (base, largeur 40)
     int yT = p1_yDe(total);
     myGLCD.setColor(0, 130, 255);
-    myGLCD.fillRect(P1_XBL, yT, P1_XBL + 40, yC);
+    myGLCD.fillRect(P1_XBL +10, yT, P1_XBL + 60, yC);
 
     // barre blanche horizontale au niveau du total (haut de la boite bleue)
     myGLCD.setColor(255, 255, 255);
-    myGLCD.fillRect(P1_XBL, yT - 5, P1_XBL + 70, yT - 1);
+    myGLCD.fillRect(P1_XBL + 10, yT - 3, P1_XBL + 70, yT - 1);
 
     p1_consoAvant = consoW;
     p1_prodAvant = prodW;
   }
 
-  // ---- valeurs de la colonne de droite ----
+   // ---- valeurs de la colonne de droite ----
   myGLCD.setFont(BigFont);
   if (prodW != p1_affP) {
     p1_affP = prodW;
@@ -129,8 +129,7 @@ void rafraichirPage1() {
     p1_affT = total;
     p1_affValeur(220, 182, total, 255, 255, 255);    // blanc
   }
-
-  // ---- symbole 8 : EXCEDENT si production >= consommation ----
+    // ---- symbole 8 : EXCEDENT si production >= consommation ----
   static bool p1_excedentAffiche = false;
   bool excedent = (total <= 0);                 // prod >= conso
   if (excedent != p1_excedentAffiche) {
