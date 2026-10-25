@@ -1,48 +1,99 @@
-/* PAGE 2 : conso + prod sur 24 h (288 points de 5 min).
-   Prod vers le haut (0..800 W, bleu), conso vers le bas (0..9000 W, ambre),
-   ligne 0 au milieu (gris). Prod du jour en haut a droite (bleu). */
+/* PAGE 2 v2 : conso + prod sur 24 h (288 points de 5 min).
+   Echelle verticale identique a la page 1 : zero a y=60,
+   prod vers le haut (45 px / 1000 W, bleu), conso vers le bas
+   echelle non lineaire (1000->70, 2000->105, 4000->125,
+   6000->145, 8000->165 px, orange).
+   Pixels PAIRS = production, IMPAIRS = consommation.
+   Legende "CONSO + PROD JOUR" (BigFont) en bas au milieu,
+   prod du jour en blanc, centree au-dessus de la legende.
+   Barre bleue assise sur le niveau conso, sommet = total (meme
+   principe que la page 1) + marqueur blanc de 2 px au sommet. */
 
-const int G2_HAUT = 30, G2_ZERO = 120, G2_BAS = 220;
+const int G2_X1 = 1,  G2_X2 = 319;   // cadre au ras de l'ecran (choix de Francois)
+const int G2_HAUT = 1;               // sommet du cadre
+const int G2_ZERO = 60;              // zero a la meme hauteur que la page 1
+const int G2_BAS  = 226;             // fond du cadre
+const int G2_Y_KWH = 202;            // prod du jour, blanc, centre
+const int G2_Y_LEG = 222;            // legende BigFont en bas
 float p2_affKwh = -1;
+
+// profondeur en px sous le zero : echelle NON LINEAIRE de la page 1
+int profondeurConso(uint16_t w) {
+  if (w <= 1000) return       (int)(( w        * 70UL) / 1000);
+  if (w <= 2000) return 70  + (int)(((w - 1000) * 35UL) / 1000);
+  if (w <= 4000) return 105 + (int)(((w - 2000) * 20UL) / 2000);
+  if (w <= 6000) return 125 + (int)(((w - 4000) * 20UL) / 2000);
+  return             145 + (int)(((w - 6000) * 20UL) / 2000);
+}
 
 void dessinerPage2() {
   myGLCD.clrScr();
-  myGLCD.setColor(255, 255, 255);
-  myGLCD.print("Conso+Prod Jour", CENTER, 5);
   myGLCD.setColor(100, 100, 100);
-  myGLCD.drawRect(10, G2_HAUT, 310, G2_BAS);
-  myGLCD.drawLine(10, G2_ZERO, 310, G2_ZERO);      // ligne du 0
+  myGLCD.drawRect(G2_X1, G2_HAUT, G2_X2, G2_BAS);       // cadre
+  myGLCD.setColor(255, 255, 255);
+  myGLCD.drawLine(G2_X1, G2_ZERO, G2_X2, G2_ZERO);      // ligne du 0 (blanche)
 
-  // production vers le haut (bleu)
-  myGLCD.setColor(0, 130, 255);
-  for (int i = 0; i < NB_JOUR; i++) {
-    if (tabJour[i] == 65535) continue;             // pas de donnee
-    int x = 10 + (i * 300UL) / NB_JOUR;
-    int h = (int)((G2_ZERO - G2_HAUT) * tabJour[i] / PROD_MAX_GRAPH);
-    if (h < 1) h = 1;
-    myGLCD.drawLine(x, G2_ZERO - h, x, G2_ZERO);
-  }
-  // consommation vers le bas (ambre)
-  myGLCD.setColor(255, 165, 0);
-  for (int i = 0; i < NB_JOUR; i++) {
-    if (tabJourC[i] == 65535) continue;
-    int x = 10 + (i * 300UL) / NB_JOUR;
-    int h = (int)((G2_BAS - G2_ZERO) * tabJourC[i] / CONSO_MAX_GRAPH);
-    if (h < 1) h = 1;
-    myGLCD.drawLine(x, G2_ZERO, x, G2_ZERO + h);
+  for (int x = G2_X1; x <= G2_X2; x++) {
+    int i = ((x - G2_X1) * (NB_JOUR - 1)) / (G2_X2 - G2_X1);  // instant du pixel
+
+    if (x % 2 == 0) {                       // --- pixel PAIR : production (bleu)
+      if (tabJour[i] != 65535) {
+        // base : sommet de la barre conso au meme instant (meme principe que page 1)
+        uint16_t consoIci = (tabJourC[i] == 65535) ? 0 : tabJourC[i];
+        int base = G2_ZERO + profondeurConso(consoIci);
+        int h = (int)((uint32_t)tabJour[i] * 45UL / 1000);   // 45 px / 1000 W
+        if (h < 1) h = 1;
+        int yHaut = base - h;                // sommet = niveau du total
+        if (yHaut < G2_HAUT) yHaut = G2_HAUT;                // ecretage au cadre
+        myGLCD.setColor(0, 130, 255);
+        myGLCD.drawLine(x, yHaut, x, base);                  // barre bleue
+        // --- marqueur blanc : un pixel a l'extremite, un pixel au-dessus
+        if (yHaut > G2_HAUT) {
+          myGLCD.setColor(255, 255, 255);
+          myGLCD.drawPixel(x, yHaut);
+          myGLCD.drawPixel(x, yHaut - 1);
+        } else {
+          myGLCD.setColor(255, 255, 255);                    // cadre atteint : un seul pixel
+          myGLCD.drawPixel(x, yHaut);
+        }
+      }
+    } else {                                // --- pixel IMPAIR : conso (orange)
+      if (tabJourC[i] != 65535) {
+        int d = profondeurConso(tabJourC[i]);
+        if (d < 1) d = 1;
+        if (G2_ZERO + d > G2_BAS) d = G2_BAS - G2_ZERO;      // limite du cadre
+        myGLCD.setColor(255, 165, 0);
+        myGLCD.drawLine(x, G2_ZERO, x, G2_ZERO + d);
+      }
+    }
   }
 
+  ecrireLegendePage2();
   p2_affKwh = -1;
   rafraichirPage2();
 }
 
+void ecrireLegendePage2() {
+  // "CONSO + PROD JOUR" : 17 caracteres BigFont (16 px) = 272 px
+  myGLCD.setFont(BigFont);
+  int x = 160 - 136;                  // centre de l'ecran (320 px)
+  myGLCD.setColor(255, 165, 0);  myGLCD.print("CONSO", x, G2_Y_LEG);        x += 5 * 16;
+  myGLCD.setColor(255, 255, 255);  myGLCD.print(" + ", x, G2_Y_LEG);       x += 3 * 16;
+  myGLCD.setColor(0, 130, 255);  myGLCD.print("PROD", x, G2_Y_LEG);        x += 4 * 16;
+  myGLCD.setColor(255, 255, 255);  myGLCD.print(" JOUR", x, G2_Y_LEG);
+}
+
 void rafraichirPage2() {
-  // seule la valeur kWh du jour se met a jour en live
+  // prod du jour en blanc, centree au-dessus de la legende, live
   if (prodJourKwh != p2_affKwh) {
     p2_affKwh = prodJourKwh;
-    myGLCD.setColor(0, 0, 0);
-    myGLCD.print("        ", 240, 5);
-    myGLCD.setColor(0, 130, 255);
-    myGLCD.printNumF(prodJourKwh, 2, 240, 5);
+    char buf[16];
+    dtostrf(prodJourKwh, 0, 2, buf);          // ex. "1.70" (pas de sprintf float sur AVR)
+    strcat(buf, " kWh");                      // -> "1.70 kWh"
+    myGLCD.setFont(BigFont);
+    myGLCD.setColor(0, 0, 0);                // efface (lecon UTFT : fillRect, pas espaces)
+    myGLCD.fillRect(96, G2_Y_KWH, 224, G2_Y_KWH + 16);
+    myGLCD.setColor(255, 255, 255);
+    myGLCD.print(buf, CENTER, G2_Y_KWH);
   }
 }
