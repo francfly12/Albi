@@ -3,6 +3,8 @@
   P1 jauge (net conso-prod) / P2 jour conso+prod / P3 semaine conso+prod / P4 texte.
   Bouton bleu : page suivante ; bouton blanc (P4) : reset productions.
   Veille ecran 5 min ; reveil sur bouton -> page 1.
+  Correctifs : parseur radio strict (anti-bruit HC12 absent), garde NaN PZEM,
+  pull-up RX3 (anti bruit si emetteur non alimente).
 */
 #define MODE_TEST 0   // 1 = courbes synthetiques pour test graphique, 0 = utilisation reelle
 
@@ -61,7 +63,11 @@ bool analyserTrame(const char* t) {
   const char* pI = strchr(t, 'I');
   const char* pE = strchr(t, 'E');
   if (!pP || !pI || !pE || pI < pP || pE < pI) return false;
-  consoW = atof(pP + 1); importKwh = atof(pI + 1); exportKwh = atof(pE + 1);
+  float c = atof(pP + 1), im = atof(pI + 1), ex = atof(pE + 1);
+  // parseur STRICT : trame absurde = bruit serie (HC12 absent/non alimente)
+  if (c < 0 || c > 20000 || im < 0 || im > 100000 || ex < 0 || ex > 100000)
+    return false;
+  consoW = c; importKwh = im; exportKwh = ex;
   dernierRadioMs = millis();
   return true;
 }
@@ -111,6 +117,8 @@ void setup() {
 
   pinMode(30, OUTPUT); digitalWrite(30, LOW);   // masse du bouton BLANC (D26/D30)
 
+  pinMode(15, INPUT_PULLUP);   // RX3 au niveau repos UART si HC12 absent/non alimente
+
   Serial.begin(9600);
   Serial3.begin(9600);
 
@@ -141,8 +149,10 @@ void loop() {
 #if MODE_TEST            // #if (pas #ifdef) : coupe vraiment quand MODE_TEST = 0
     testValeurs();
 #else
-    prodW    = pzem.power();
-    tensionV = pzem.voltage();
+    float p = pzem.power();          // garde NaN : PZEM muet ne doit plus rien polluer
+    float t = pzem.voltage();
+    if (!isnan(p)) prodW = p;
+    if (!isnan(t)) tensionV = t;
 #endif
     prodJourKwh += prodW / 1800.0;   // energie = prodW W x 2 s, en kWh (2 s d'echantillonnage)
     prodTotKwh  += prodW / 1800.0;
