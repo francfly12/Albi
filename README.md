@@ -1,6 +1,7 @@
 # ALBI — mesure et affichage énergie maison
 
 Mesure et affichage de la **consommation** et de la **production photovoltaïque** de la maison, par radio.
+<img width="1440" height="1080" alt="20261023_150039 (Grand)" src="https://github.com/user-attachments/assets/2f037278-31c3-4eea-9fb8-72a12122beb9" />
 
 ## Matériel
 
