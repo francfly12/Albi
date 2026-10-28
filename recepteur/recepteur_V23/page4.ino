@@ -1,8 +1,17 @@
 /* PAGE 4 : texte — prod inst. (bleu), conso (orange), prod jour (blanc),
    prod totale (blanc), tension (vert). Valeur + unite, couleurs du label.
-   Reset bouton blanc gere dans loop() (fichier principal). */
+   Reset bouton blanc gere dans loop() (fichier principal).
 
-const int P4_X_VAL = 184;               // x de depart des valeurs (recule d'un cadrat)
+   v2.3 corr. débordement : quand la valeur est large ("4530.15" + "Kwh"),
+   l'unité sortait de l'écran (le "w" orphelin). Désormais :
+   - on retire les décimales si valeur+unité ne tiennent pas,
+   - sinon on décale la valeur vers la gauche (alignée à droite sur le bord),
+   - la zone effaçée va de x=172 à 319 (couvre aussi les valeurs décalées). */
+
+const int P4_X_VAL = 184;               // x habituel des valeurs (cadrat après libellé)
+const int P4_X_MIN = 172;               // bord gauche mini : "Prod.total" finit à x=165
+const int P4_X_MAX = 319;               // bord droit de l'écran
+const int P4_CADRAT = 16;               // BigFont = 16 px/cadrat
 
 float p4_aff[5] = { -1, -1, -1, -1, -1 };   // memoire des dernieres valeurs affichees
 
@@ -13,13 +22,25 @@ void p4_affChiffre(byte slot, int y, float v, byte dec,
   if (isnan(v)) v = 0;                     // garde NaN (PZEM muet en mode reel)
   if (v == p4_aff[slot]) return;
   p4_aff[slot] = v;
-  myGLCD.setColor(0, 0, 0);                // efface la zone valeur + unite
-  myGLCD.fillRect(P4_X_VAL, y, 319, y + 16);
-  myGLCD.setColor(r, g, b);
   char buf[12];
   dtostrf(v, 0, dec, buf);                 // pas de sprintf float sur AVR
-  myGLCD.print(buf, P4_X_VAL, y);
-  myGLCD.print(unite, P4_X_VAL + strlen(buf) * 16, y);   // BigFont = 16 px/cadrat
+
+  // --- anti-debordement (v2.3) ---
+  int total = (strlen(buf) + strlen(unite)) * P4_CADRAT;   // largeur valeur+unite
+  if (total > (P4_X_MAX - P4_X_MIN + 1) && dec > 0) {
+    dec = 0;                               // "4530.15Kwh" (10 cadrats) -> "4530Kwh" (8)
+    dtostrf(v, 0, dec, buf);
+    total = (strlen(buf) + strlen(unite)) * P4_CADRAT;
+  }
+  int xVal = P4_X_MAX + 1 - total;         // aligne a droite si ca deborde...
+  if (xVal > P4_X_VAL) xVal = P4_X_VAL;    // ...sinon position habituelle
+  if (xVal < P4_X_MIN) xVal = P4_X_MIN;    // jamais sous le libelle (cas extreme)
+
+  myGLCD.setColor(0, 0, 0);                // efface TOUTE la zone valeur (meme si
+  myGLCD.fillRect(P4_X_MIN, y, P4_X_MAX, y + 15);  // la valeur precedente etait large)
+  myGLCD.setColor(r, g, b);
+  myGLCD.print(buf, xVal, y);
+  myGLCD.print(unite, xVal + strlen(buf) * P4_CADRAT, y);
 }
 
 void dessinerPage4() {
