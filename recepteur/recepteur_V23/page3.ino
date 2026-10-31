@@ -4,7 +4,11 @@
    - legende "CONSO+PROD SEMAINE" (BigFont) en bas au milieu
    - production TOTALE en kWh, blanc, au-dessus de la legende (live)
    Depend de profondeurConso() definie dans page2.ino (meme dossier,
-   concatene avant par l'IDE : ordre alphabetique page2 < page3). */
+   concatene avant par l'IDE : ordre alphabetique page2 < page3).
+   31/10/2026 : correctif debordement int 16 bits (AVR) : le produit
+   (x-G3_X1)*(NB_SEMAINE-1) depasse 32767 des x~99 -> cast uint32_t.
+   C'etait la cause des barres orange fantomes "des le demarrage" :
+   i negatif lisait la RAM avant tabSemaine (= tampon du jour). */
 
 const int G3_X1 = 1,   G3_X2 = 319;   // cadre elargi comme la page 2
 const int G3_HAUT = 1,  G3_BAS = 226;
@@ -21,7 +25,7 @@ void dessinerPage3() {
   myGLCD.drawLine(G3_X1, G3_ZERO, G3_X2, G3_ZERO);      // ligne du 0 (blanche)
 
   for (int x = G3_X1; x <= G3_X2; x++) {
-    int i = ((x - G3_X1) * (NB_SEMAINE - 1)) / (G3_X2 - G3_X1);  // instant du pixel
+    int i = (int)(((uint32_t)(x - G3_X1) * (NB_SEMAINE - 1)) / (G3_X2 - G3_X1));  // instant du pixel (cast 32 bits)
 
     if (x % 2 == 0) {                       // --- pixel PAIR : production (bleu)
       if (tabSemaine[i] != 65535) {

@@ -2,13 +2,22 @@
    Index gauche non lineaire : 0->1000 grand, puis 2000..8000 dilates
    pour que 8000 soit en bas de l'echelle.
    Boite orange = conso (du 0 vers le bas), boite bleue = prod
-   (assise sur le niveau conso, barre blanche au niveau du TOTAL). */
+   (assise sur le niveau conso, barre blanche au niveau du TOTAL).
+   + fleche blanche du TOTAL : triangle de 5 px a l'extremite DROITE
+     de la barre blanche, pointe vers la GAUCHE, qui suit le total
+     (AJOUT 31/10/2026, revu : sens gauche). */
 
 // ---- geometrie (ajustable apres test ecran) ----
 const int P1_Y0   = 60;    // ligne du zero
 const int P1_KY   = 45;    // px pour 0->1000 W au-dessus du zero (prod)
 const int P1_XOR  = 60;    // bord gauche boite orange (largeur 40)
 const int P1_XBL  = 105;   // bord gauche boite bleue  (largeur 40)
+
+// ---- fleche du TOTAL (AJOUT) ----
+// pointe a x=174 (dans la barre blanche, qui finit a x=175), base a x=176.
+// Toute la zone x<=176 est deja effacee par le grand fillRect de
+// rafraichirPage1 : l'ancienne fleche disparait avec les barres.
+const int P1_X_FL = 174;
 
 float p1_consoAvant = -1, p1_prodAvant = -1;
 float p1_affP = -1, p1_affC = -1, p1_affT = -1;
@@ -35,6 +44,16 @@ float p1_echelle(float w) {
 int p1_yDe(float v) {
   if (v >= 0) return P1_Y0 + (int)p1_echelle(v);   // plus de facteur KY/90 !
   return P1_Y0 + (int)(v * P1_KY / 1000.0);        // negatif -> au-dessus du zero
+}
+
+// ---- fleche : triangle blanc de 5 px, POINTE VERS LA DROITE (AJOUT) ----
+void p1_dessinerFleche(int y) {
+  myGLCD.setColor(255, 255, 255);
+  myGLCD.drawLine(P1_X_FL,y,P1_X_FL - 8, y - 4 );
+  myGLCD.drawLine(P1_X_FL,y,P1_X_FL - 8, y - 2 );
+  myGLCD.drawLine(P1_X_FL,y,P1_X_FL - 8, y + 4 );
+  myGLCD.drawLine(P1_X_FL,y,P1_X_FL - 8, y + 2 );
+  myGLCD.drawLine(P1_X_FL - 8, y - 4, P1_X_FL - 8, y + 4 );        // pointe, sur l'extremite de la barre
 }
 
 void dessinerPage1() {
@@ -109,7 +128,13 @@ void rafraichirPage1() {
 
     // barre blanche horizontale au niveau du total (haut de la boite bleue)
     myGLCD.setColor(255, 255, 255);
-    myGLCD.fillRect(P1_XBL + 10, yT - 3, P1_XBL + 70, yT - 1);
+    myGLCD.fillRect(P1_XBL + 10, yT - 3, P1_XBL + 66, yT - 1);
+
+    // ---- fleche du TOTAL (AJOUT) ----
+    // triangle blanc, pointe a droite vers l'extremite droite de
+    // la barre blanche (yT-2 = milieu de son epaisseur). Pas d'effacement
+    // propre : le grand fillRect ci-dessus (jusqu'a x=176) la balaye deja.
+    p1_dessinerFleche(yT - 2);
 
     p1_consoAvant = consoW;
     p1_prodAvant = prodW;

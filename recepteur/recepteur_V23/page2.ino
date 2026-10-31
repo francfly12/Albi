@@ -7,7 +7,9 @@
    Legende "CONSO + PROD JOUR" (BigFont) en bas au milieu,
    prod du jour en blanc, centree au-dessus de la legende.
    Barre bleue assise sur le niveau conso, sommet = total (meme
-   principe que la page 1). [TEST] : diagnostic temporaire serie. */
+   principe que la page 1). [TEST] : diagnostic temporaire serie.
+   31/10/2026 : correctif debordement int 16 bits (AVR) : le produit
+   (x-G2_X1)*(NB_JOUR-1) depasse 32767 des x~116 -> cast uint32_t. */
 
 const int G2_X1 = 1,  G2_X2 = 319;   // horizontal : garde l'actuel
 const int G2_HAUT = 1;               // sommet du cadre
@@ -34,17 +36,8 @@ void dessinerPage2() {
   myGLCD.drawLine(G2_X1, G2_ZERO, G2_X2, G2_ZERO);      // ligne du 0 (blanche)
 
   for (int x = G2_X1; x <= G2_X2; x++) {
-    int i = ((x - G2_X1) * (NB_JOUR - 1)) / (G2_X2 - G2_X1);  // instant du pixel
+    int i = (int)(((uint32_t)(x - G2_X1) * (NB_JOUR - 1)) / (G2_X2 - G2_X1));  // instant du pixel (cast 32 bits)
 
-    // --- [TEST] diagnostic serie sur quelques instants temoins
-    if (i == 100 || i == 150) {
-      Serial.print("[P2] x=");    Serial.print(x);
-      Serial.print(" i=");       Serial.print(i);
-      Serial.print(" pair=");    Serial.print((x % 2 == 0) ? "OUI" : "NON");
-      Serial.print(" prod=");    Serial.print(tabJour[i]);
-      Serial.print(" conso=");   Serial.print(tabJourC[i]);
-      Serial.print(" base=");    Serial.println(G2_ZERO + profondeurConso(tabJourC[i] == 65535 ? 0 : tabJourC[i]));
-    }
     if (x % 2 == 0) {                       // --- pixel PAIR : production (bleu)
       if (tabJour[i] != 65535) {
         // base : sommet de la barre conso au meme instant (meme principe que page 1)

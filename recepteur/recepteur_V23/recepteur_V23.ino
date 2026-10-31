@@ -14,9 +14,11 @@
      - resume toutes les 10 s : ok/rejetees + consoW actuelle
      Motifs : FORMAT (P/I/E absents ou mal ordonnes), NEG (c<0 : sensInverse
      actif sur l'emetteur ? LED double flash ?), CONSO/IMPORT/EXPORT (hors bornes).
-     -> Si la conso affichee est erratique : regarder si les trames sont
-        perdues (resume ok=0 : probleme radio/alim) ou rejetees (NEG etc :
-        probleme de parseur, cote emetteur).
+  31/10/2026 :
+  3) Repli fin de trame par silence de 100 ms (si l'emetteur n'envoie pas
+     de \n), retour du mecanisme v1.5 perdu dans les reecritures v2.x.
+  4) Tampons jour/semaine initialises a 65535 (pas de donnee) dans setup(),
+     avant tout affichage.
 */
 #define MODE_TEST 0   // 1 = courbes synthetiques pour test graphique, 0 = utilisation reelle
 
@@ -134,7 +136,13 @@ void lireRadio() {
     if (c == '\n' || c == '\r') { if (idx > 0) { buf[idx] = '\0'; analyserTrame(buf); idx = 0; } }
     else if (idx < sizeof(buf) - 1) buf[idx++] = c;
   }
-  if (idx > 0 && millis() - dernierCarMs > 100) { buf[idx] = '\0'; analyserTrame(buf); idx = 0; }
+  // fin de trame par silence : plus de caractere depuis 100 ms
+  // et tampon non vide -> on traite (repli si l'emetteur n'envoie pas de \n)
+  if (idx > 0 && millis() - dernierCarMs > 100) {
+    buf[idx] = '\0';
+    analyserTrame(buf);
+    idx = 0;
+  }
 }
 
 // resume radio toutes les 10 s (v2.3)
@@ -191,6 +199,8 @@ void setup() {
   Serial.begin(9600);
   Serial3.begin(9600);
 
+  // tampons a 65535 = "pas de donnee" (sinon le runtime les met a 0,
+  // qui se dessine comme une vraie mesure de 0 W)
   for (int i = 0; i < NB_JOUR; i++)    { tabJour[i] = 65535;    tabJourC[i] = 65535; }
   for (int i = 0; i < NB_SEMAINE; i++) { tabSemaine[i] = 65535; tabSemaineC[i] = 65535; }
 
